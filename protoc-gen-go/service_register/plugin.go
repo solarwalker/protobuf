@@ -48,24 +48,24 @@ func (sr *ServiceRegister) generateService(file *generator.FileDescriptor, servi
 	serverType := servName + "Server"
 
 	sr.gen.P(`// grpc`)
-	sr.gen.P(`type GrpcServicer interface {`)
+	sr.gen.P(`type GrpcServer interface {`)
 	sr.gen.P(serverType)
 	sr.gen.P(`GetServer() *grpc.Server`)
 	sr.gen.P(`}`)
 
-	sr.gen.P(`func RegisterGrpcService(s GrpcServicer) {`)
+	sr.gen.P(`func RegisterGrpcServer(s GrpcServer) {`)
 	sr.gen.P(`Register` + serverType + `(s.GetServer(), s)`)
 	sr.gen.P(`}`)
 
 	sr.gen.P(`// http`)
-	sr.gen.P(`type HttpServicer interface {`)
+	sr.gen.P(`type HttpServer interface {`)
 	sr.gen.P(serverType)
 	sr.gen.P(`Handle(pattern string, h http.HandlerFunc)`)
 	sr.gen.P(`Decode(ctx context.Context, r *http.Request, arg interface{}) error`)
 	sr.gen.P(`HandleReply(ctx context.Context, reply interface{}, w http.ResponseWriter)`)
 	sr.gen.P(`}`)
 
-	sr.gen.P(`func RegisterHttpService(s HttpServicer) {`)
+	sr.gen.P(`func RegisterHttpServer(s HttpServer) {`)
 	for _, m := range service.Method {
 		sr.gen.P(`s.Handle("/api/` + fullServName + `/` + m.GetName() + `", func(writer http.ResponseWriter, request *http.Request) {`)
 
