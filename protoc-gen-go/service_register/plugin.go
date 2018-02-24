@@ -1,8 +1,14 @@
 package service_register
 
 import (
+	"strconv"
+
 	pb "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/golang/protobuf/protoc-gen-go/generator"
+)
+
+const (
+	contextPkgPath = "github.com/solarwalker/base/context"
 )
 
 func init() {
@@ -17,8 +23,13 @@ func (sr *ServiceRegister) Name() string {
 	return "service_register"
 }
 
+var (
+	ctxPkg string
+)
+
 func (sr *ServiceRegister) Init(g *generator.Generator) {
 	sr.gen = g
+	ctxPkg = generator.RegisterUniquePackageName("swc", nil)
 }
 
 func (sr *ServiceRegister) Generate(file *generator.FileDescriptor) {
@@ -33,6 +44,7 @@ func (sr *ServiceRegister) GenerateImports(file *generator.FileDescriptor) {
 	}
 	sr.gen.P("import (")
 	sr.gen.P(`"net/http"`)
+	sr.gen.P(ctxPkg, " ", strconv.Quote(contextPkgPath))
 	sr.gen.P(")")
 	sr.gen.P()
 }
@@ -61,15 +73,15 @@ func (sr *ServiceRegister) generateService(file *generator.FileDescriptor, servi
 	sr.gen.P(`type HttpServer interface {`)
 	sr.gen.P(serverType)
 	sr.gen.P(`Handle(pattern string, h http.HandlerFunc)`)
-	sr.gen.P(`Decode(ctx context.Context, r *http.Request, arg interface{}) error`)
-	sr.gen.P(`HandleReply(ctx context.Context, reply interface{}, w http.ResponseWriter)`)
+	sr.gen.P(`Decode(ctx `, ctxPkg, `.Context, r *http.Request, arg interface{}) error`)
+	sr.gen.P(`HandleReply(ctx `, ctxPkg, `.Context, reply interface{}, w http.ResponseWriter)`)
 	sr.gen.P(`}`)
 
 	sr.gen.P(`func RegisterHttpServer(s HttpServer) {`)
 	for _, m := range service.Method {
 		sr.gen.P(`s.Handle("/api/` + fullServName + `/` + m.GetName() + `", func(writer http.ResponseWriter, request *http.Request) {`)
 
-		sr.gen.P(`ctx := context.Background()`)
+		sr.gen.P(`ctx := `, ctxPkg, `.New()`)
 		sr.gen.P(`arg := &` + sr.typeName(m.GetInputType()) + `{}`)
 
 		sr.gen.P(`if err := s.Decode(ctx, request, arg); err != nil {`)
