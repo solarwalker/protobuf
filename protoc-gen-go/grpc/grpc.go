@@ -54,6 +54,7 @@ const generatedCodeVersion = 4
 // relative to the import_prefix of the generator.Generator.
 const (
 	contextPkgPath = "golang.org/x/net/context"
+	swcPkgPath     = "github.com/solarwalker/base/context"
 	grpcPkgPath    = "google.golang.org/grpc"
 )
 
@@ -77,6 +78,7 @@ func (g *grpc) Name() string {
 // if the name is used by other packages.
 var (
 	contextPkg string
+	swcPkg     string
 	grpcPkg    string
 )
 
@@ -84,6 +86,7 @@ var (
 func (g *grpc) Init(gen *generator.Generator) {
 	g.gen = gen
 	contextPkg = generator.RegisterUniquePackageName("context", nil)
+	swcPkg = generator.RegisterUniquePackageName("swc", nil)
 	grpcPkg = generator.RegisterUniquePackageName("grpc", nil)
 }
 
@@ -131,6 +134,7 @@ func (g *grpc) GenerateImports(file *generator.FileDescriptor) {
 	}
 	g.P("import (")
 	g.P(contextPkg, " ", strconv.Quote(path.Join(g.gen.ImportPrefix, contextPkgPath)))
+	g.P(swcPkg, " ", strconv.Quote(path.Join(g.gen.ImportPrefix, swcPkgPath)))
 	g.P(grpcPkg, " ", strconv.Quote(path.Join(g.gen.ImportPrefix, grpcPkgPath)))
 	g.P(")")
 	g.P()
@@ -366,7 +370,7 @@ func (g *grpc) generateServerSignature(servName string, method *pb.MethodDescrip
 	var reqArgs []string
 	ret := "error"
 	if !method.GetServerStreaming() && !method.GetClientStreaming() {
-		reqArgs = append(reqArgs, contextPkg+".Context")
+		reqArgs = append(reqArgs, swcPkg+".Context")
 		ret = "(*" + g.typeName(method.GetOutputType()) + ", error)"
 	}
 	if !method.GetClientStreaming() {
@@ -389,13 +393,13 @@ func (g *grpc) generateServerMethod(servName, fullServName string, method *pb.Me
 		g.P("func ", hname, "(srv interface{}, ctx ", contextPkg, ".Context, dec func(interface{}) error, interceptor ", grpcPkg, ".UnaryServerInterceptor) (interface{}, error) {")
 		g.P("in := new(", inType, ")")
 		g.P("if err := dec(in); err != nil { return nil, err }")
-		g.P("if interceptor == nil { return srv.(", servName, "Server).", methName, "(ctx, in) }")
+		g.P("if interceptor == nil { return srv.(", servName, "Server).", methName, "(", swcPkg, ".From(ctx), in) }")
 		g.P("info := &", grpcPkg, ".UnaryServerInfo{")
 		g.P("Server: srv,")
 		g.P("FullMethod: ", strconv.Quote(fmt.Sprintf("/%s/%s", fullServName, methName)), ",")
 		g.P("}")
 		g.P("handler := func(ctx ", contextPkg, ".Context, req interface{}) (interface{}, error) {")
-		g.P("return srv.(", servName, "Server).", methName, "(ctx, req.(*", inType, "))")
+		g.P("return srv.(", servName, "Server).", methName, "(", swcPkg, ".From(ctx), req.(*", inType, "))")
 		g.P("}")
 		g.P("return interceptor(ctx, in, info, handler)")
 		g.P("}")
